@@ -1,11 +1,12 @@
 "use client";
 
-import { interviewer } from "@/constants";
-import { cn } from "@/lib/utils";
-import { vapi } from "@/lib/vapi.sdk";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { vapi } from "@/lib/vapi.sdk";
+import { interviewer } from "@/constants";
+import { createFeedback } from "@/lib/actions/general.action";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -15,7 +16,7 @@ enum CallStatus {
 }
 
 interface SavedMessage {
-  role: "user" | "assistant" | "system";
+  role: "user" | "system" | "assistant";
   content: string;
 }
 
@@ -29,59 +30,55 @@ const Agent = ({
   const router = useRouter();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
-  const [messages, setMessage] = useState<SavedMessage[]>([]);
+  const [messages, setMessages] = useState<SavedMessage[]>([]);
 
   useEffect(() => {
-    const onCallStart = () => {
-      setCallStatus(CallStatus.ACTIVE);
-    };
-
-    const onCallEnd = () => {
-      setCallStatus(CallStatus.FINISHED);
-    };
+    const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
+    const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
 
     const onMessage = (message: Message) => {
       if (message.type === "transcript" && message.transcriptType === "final") {
         const newMessage = { role: message.role, content: message.transcript };
-        setMessage((prev) => [...prev, newMessage]);
+
+        setMessages((prev) => [...prev, newMessage]);
       }
     };
 
-    const onSpeachStart = () => setIsSpeaking(true);
-    const onSpeachEnd = () => setIsSpeaking(false);
+    const onSpeechStart = () => setIsSpeaking(true);
+    const onSpeechEnd = () => setIsSpeaking(false);
 
-    const onError = (error: Error) => {
-      console.error("Error", error);
-    };
+    const onError = (error: Error) => console.log("Error", error);
 
     vapi.on("call-start", onCallStart);
     vapi.on("call-end", onCallEnd);
     vapi.on("message", onMessage);
-    vapi.on("speech-start", onSpeachStart);
-    vapi.on("speech-end", onSpeachEnd);
+    vapi.on("speech-start", onSpeechStart);
+    vapi.on("speech-end", onSpeechEnd);
     vapi.on("error", onError);
 
     return () => {
       vapi.off("call-start", onCallStart);
       vapi.off("call-end", onCallEnd);
       vapi.off("message", onMessage);
-      vapi.off("speech-start", onSpeachStart);
-      vapi.off("speech-end", onSpeachEnd);
+      vapi.off("speech-start", onSpeechStart);
+      vapi.off("speech-end", onSpeechEnd);
       vapi.off("error", onError);
     };
   }, []);
 
   const handleGenerateFeedback = async (messages: SavedMessage[]) => {
-    console.log("generate feedback here");
+    console.log("Generate feedback here.");
 
-    const { success, id } = {
-      success: true,
-      id: "feedback-id",
-    };
+    const { success, feedbackId: id } = await createFeedback({
+      interviewId: interviewId!,
+      userId: userId!,
+      transcript: messages,
+    });
+
     if (success && id) {
-      router.push(`/interview/${interviewId}/feedback}`);
+      router.push(`/interview/${interviewId}/feedback`);
     } else {
-      console.error("Failed to generate feedback");
+      console.log("Error saving feedback");
       router.push("/");
     }
   };
@@ -94,7 +91,7 @@ const Agent = ({
         handleGenerateFeedback(messages);
       }
     }
-  }, [messages, callStatus, type, userId, router]);
+  }, [messages, callStatus, type, userId]);
 
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
@@ -130,7 +127,6 @@ const Agent = ({
   };
 
   const latestMessage = messages[messages.length - 1]?.content;
-
   const isCallInactiveOrFinished =
     callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
 
@@ -158,9 +154,8 @@ const Agent = ({
               alt="user avatar"
               width={540}
               height={540}
-              className="object-cover rounded-full size-[120px]"
+              className="rounded-full object-cover size-[120px]"
             />
-
             <h3>{userName}</h3>
           </div>
         </div>
@@ -190,6 +185,7 @@ const Agent = ({
                 callStatus !== "CONNECTING" && "hidden"
               )}
             />
+
             <span>{isCallInactiveOrFinished ? "Call" : ". . ."}</span>
           </button>
         ) : (
@@ -201,5 +197,4 @@ const Agent = ({
     </>
   );
 };
-
 export default Agent;
