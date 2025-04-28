@@ -83,7 +83,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      toast.error("Invalid email or password");
     }
   }
 

@@ -4,37 +4,45 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import {
-  getFeedbackByInterviewId,
+  getAllFeedbacksByInterviewId,
   getInterviewById,
 } from "@/lib/actions/general.action";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/actions/auth.action";
+import FeedbackDropdown from "@/components/FeedbackDropdown";
 
 const Page = async ({ params }: RouteParams) => {
-  const { id } = await params;
+  const { id, feedbackId } = await params;
   const user = await getCurrentUser();
 
   const interview = await getInterviewById(id);
   if (!interview) redirect("/");
+  if (!user) redirect("/");
 
-  const feedback = await getFeedbackByInterviewId({
+  const feedbacks = await getAllFeedbacksByInterviewId({
     interviewId: id,
-    userId: user?.id!,
+    userId: user.id!,
   });
 
-  console.log(feedback);
+  if (!feedbacks || feedbacks.length === 0) {
+    redirect("/");
+  }
+
+  console.log(feedbackId);
+
+  const feedback = feedbacks.find((f) => f.id === feedbackId) || feedbacks[0];
 
   return (
     <section className="section-feedback">
-      <div className="flex flex-row justify-center">
-        <h1 className="text-4xl font-semibold">
+      <div className="flex flex-col items-center">
+        <h1 className="text-4xl font-semibold mb-4">
           Feedback on the Interview -{" "}
           <span className="capitalize">{interview.role}</span> Interview
         </h1>
       </div>
 
-      <div className="flex flex-row justify-center">
-        <div className="flex flex-row gap-5">
+      <div className="flex flex-row sm:justify-center">
+        <div className="flex flex-row gap-5 max-sm:flex-col max-sm:text-start">
           <div className="flex flex-row gap-2 items-center">
             <Image src="/star.svg" width={22} height={22} alt="star" />
             <p>
@@ -46,7 +54,7 @@ const Page = async ({ params }: RouteParams) => {
             </p>
           </div>
 
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 items-center">
             <Image src="/calendar.svg" width={22} height={22} alt="calendar" />
             <p>
               {feedback?.createdAt
@@ -56,6 +64,14 @@ const Page = async ({ params }: RouteParams) => {
           </div>
         </div>
       </div>
+      {feedbacks.length > 1 && (
+        <div className="mb-6 flex flex-col items-center rounded-t-md border-t-2 border-transparent shadow-md bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-[length:100%_2px] bg-no-repeat bg-top">
+          <h3 className="font-semibold text-lg sm:text-2xl mb-2 mt-3">
+            Feedbacks History
+          </h3>
+          <FeedbackDropdown feedbacks={feedbacks} interviewId={id} />
+        </div>
+      )}
 
       <hr />
 
@@ -114,4 +130,5 @@ const Page = async ({ params }: RouteParams) => {
     </section>
   );
 };
+
 export default Page;

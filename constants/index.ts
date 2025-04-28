@@ -48,6 +48,7 @@ export const mappings = {
   ts: "typescript",
   javascript: "javascript",
   js: "javascript",
+  "java script": "javascript",
   "angular.js": "angular",
   angularjs: "angular",
   angular: "angular",

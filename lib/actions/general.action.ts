@@ -115,3 +115,28 @@ export async function getFeedbackByInterviewId(
 
   return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
+
+export async function getAllFeedbacksByInterviewId(params: {
+  interviewId: string;
+  userId: string;
+}): Promise<Feedback[]> {
+  const { interviewId, userId } = params;
+
+  if (!interviewId || !userId) {
+    throw new Error(
+      "Missing interviewId or userId in getAllFeedbacksByInterviewId"
+    );
+  }
+
+  const snapshot = await db
+    .collection("feedback")
+    .where("interviewId", "==", interviewId)
+    .where("userId", "==", userId)
+    .orderBy("createdAt", "desc")
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Feedback[];
+}
